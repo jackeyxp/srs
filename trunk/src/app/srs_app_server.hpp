@@ -377,6 +377,8 @@ public:
 public:
     virtual int on_publish(SrsSource* s, SrsRequest* r);
     virtual void on_unpublish(SrsSource* s, SrsRequest* r);
+public:
+		virtual int doTransmitLiveLogin(int nLiveID, int nUserCount);
 };
 
 #endif

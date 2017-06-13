@@ -837,6 +837,9 @@ public:
     virtual std::string         get_ingest_input_url(SrsConfDirective* ingest);
 // log section
 public:
+		virtual int									get_rtmp_listen();
+		virtual int									get_web_port();
+		virtual std::string					get_web_addr();
     /**
     * whether log to file.
     */

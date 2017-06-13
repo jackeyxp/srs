@@ -49,6 +49,10 @@ using namespace std;
 #include <srs_app_caster_flv.hpp>
 #include <srs_core_mem_watch.hpp>
 
+#include <netdb.h>
+#include <ifaddrs.h>
+#include <curl/curl.h>
+
 // signal defines.
 #define SIGNAL_RELOAD SIGHUP
 
@@ -93,6 +97,9 @@ using namespace std;
 // update network devices info interval:
 //      SRS_SYS_CYCLE_INTERVAL * SRS_SYS_NETWORK_DEVICE_RESOLUTION_TIMES
 #define SRS_SYS_NETWORK_DEVICE_RESOLUTION_TIMES 9
+
+// 2017.06.10 - by jackey => report time out...
+#define SRS_LIVE_TIME_OUT   5 * 60
 
 std::string srs_listener_type2string(SrsListenerType type) 
 {
@@ -862,8 +869,14 @@ int SrsServer::cycle()
 {
     int ret = ERROR_SUCCESS;
 
+		// 2017.06.10 - by jackey => login...
+		doTransmitLiveLogin(0, 0);
+		
     ret = do_cycle();
 
+		// 2017.06.10 - by jackey => quit...
+		doTransmitLiveLogin(-1, 0);
+		
 #ifdef SRS_AUTO_GPERF_MC
     destroy();
     
@@ -941,7 +954,7 @@ void SrsServer::on_signal(int signo)
 int SrsServer::do_cycle()
 {
     int ret = ERROR_SUCCESS;
-    
+
     // find the max loop
     int max = srs_max(0, SRS_SYS_TIME_RESOLUTION_MS_TIMES);
     
@@ -957,6 +970,10 @@ int SrsServer::do_cycle()
     
     // for asprocess.
     bool asprocess = _srs_config->get_asprocess();
+
+		// 2017.06.10 - by jackey...
+		time_t tStartSec = time(NULL);
+		time_t tEndSec = tStartSec;
     
     // the deamon thread, update the time cache
     while (true) {
@@ -974,6 +991,13 @@ int SrsServer::do_cycle()
         
         for (int i = 0; i < temp_max; i++) {
             st_usleep(SRS_SYS_CYCLE_INTERVAL * 1000);
+
+						// 2017.06.10 - by jackey => process timeout...
+						tEndSec = time(NULL);
+						if( (tEndSec - tStartSec) >= SRS_LIVE_TIME_OUT ) {
+								doTransmitLiveLogin(0, 0);
+								tStartSec = tEndSec;
+						}
             
             // asprocess check.
             if (asprocess && ::getppid() != ppid) {
@@ -1441,3 +1465,72 @@ void SrsServer::on_unpublish(SrsSource* s, SrsRequest* r)
 #endif
 }
 
+// 2017.06.10 - the post curl callback...
+size_t procCurlPost(char *ptr, size_t size, size_t nmemb, void *stream)
+{
+	return size * nmemb;
+}
+
+// 2017.06.10 - by jackey...
+int SrsServer::doTransmitLiveLogin(int nLiveID, int nUserCount)
+{
+  struct ifaddrs *ifaddr, *ifa;
+  char host_ip[NI_MAXHOST] = {0};
+  int family, result, is_ok = 0;
+	int nRtmpPort = _srs_config->get_rtmp_listen();
+	int nWebPort = _srs_config->get_web_port();
+	std::string strWebAddr = _srs_config->get_web_addr();
+  
+  if( getifaddrs(&ifaddr) == -1) {
+    return -1;
+  }
+  for( ifa = ifaddr; ifa != NULL; ifa = ifa->ifa_next ) { 
+    if( ifa->ifa_addr == NULL )
+      continue;
+    family = ifa->ifa_addr->sa_family;
+    if( family != AF_INET )
+      continue;
+    result = getnameinfo(ifa->ifa_addr, sizeof(struct sockaddr_in), host_ip, NI_MAXHOST, NULL, 0, NI_NUMERICHOST);
+    if( result != 0 )
+      continue;
+    if( strcasecmp(host_ip, "127.0.0.1") == 0 )
+      continue;
+    is_ok = 1;
+    break;
+  }
+  freeifaddrs(ifaddr);
+  if( !is_ok ) {
+    return -1;
+  }
+  // call curl...
+  CURLcode res = CURLE_OK;
+  CURL  *  curl = curl_easy_init();
+  char strPost[255] = {0};
+  char strUrl[255] = {0};
+  string strCommand = "login";
+  if( nLiveID == 0 ) {
+    strCommand = "login";
+  } else if( nLiveID < 0 ) {
+    strCommand = "quit";
+  } else {
+    strCommand = "vary";
+  }
+  sprintf(strPost, "rtmp_addr=%s:%d&rtmp_live=%d&rtmp_user=%d", host_ip, nRtmpPort, nLiveID, nUserCount);
+  sprintf(strUrl, "http://%s:%d/wxapi.php/RTMP/%s", strWebAddr.c_str(), nWebPort, strCommand.c_str());
+  if( curl == NULL )
+    return -1;
+  // 设定curl参数，采用post模式...
+  res = curl_easy_setopt(curl, CURLOPT_POSTFIELDS, strPost);
+  res = curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, strlen(strPost));
+  res = curl_easy_setopt(curl, CURLOPT_HEADER, 0);
+  res = curl_easy_setopt(curl, CURLOPT_POST, 1);
+  res = curl_easy_setopt(curl, CURLOPT_VERBOSE, 0);
+  res = curl_easy_setopt(curl, CURLOPT_URL, strUrl);
+  res = curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, procCurlPost);
+  res = curl_easy_perform(curl);
+  // 释放资源...
+  if( curl != NULL ) {
+    curl_easy_cleanup(curl);
+  }
+  return 0;
+}

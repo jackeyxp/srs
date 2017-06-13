@@ -1573,6 +1573,7 @@ int SrsConfig::check_config()
             && n != "http_api" && n != "stats" && n != "vhost" && n != "pithy_print_ms"
             && n != "http_stream" && n != "http_server" && n != "stream_caster"
             && n != "utc_time" && n != "work_dir" && n != "asprocess"
+						&& n != "web_addr" && n != "web_port"
         ) {
             ret = ERROR_SYSTEM_CONFIG_INVALID;
             srs_error("unsupported directive %s, ret=%d", n.c_str(), ret);
@@ -3541,6 +3542,42 @@ string SrsConfig::get_ingest_input_url(SrsConfDirective* ingest)
         return "";
     }
     
+    return conf->arg0();
+}
+
+// 2017.06.10 - by jackey...
+int SrsConfig::get_rtmp_listen()
+{
+    srs_assert(root);
+    
+    SrsConfDirective* conf = root->get("listen");
+    if (!conf || conf->arg0().empty()) {
+        return -1;
+    }
+    return ::atoi(conf->arg0().c_str());
+}
+
+// 2017.06.10 - add by jackey...
+int SrsConfig::get_web_port()
+{
+    srs_assert(root);
+    
+    SrsConfDirective* conf = root->get("web_port");
+    if (!conf || conf->arg0().empty()) {
+        return -1;
+    }
+    return ::atoi(conf->arg0().c_str());
+}
+
+// 2017.06.10 - add by jackey...
+string SrsConfig::get_web_addr()
+{
+    srs_assert(root);
+    
+    SrsConfDirective* conf = root->get("web_addr");
+    if (!conf || conf->arg0().empty()) {
+        return "";
+    }
     return conf->arg0();
 }
 

@@ -23,6 +23,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include <srs_app_statistic.hpp>
 
+#include <stdlib.h>
 #include <unistd.h>
 #include <sstream>
 using namespace std;
@@ -33,6 +34,9 @@ using namespace std;
 #include <srs_app_conn.hpp>
 #include <srs_app_config.hpp>
 #include <srs_kernel_utility.hpp>
+
+#include <srs_app_server.hpp>
+extern SrsServer* _srs_server;
 
 int64_t srs_gvid = getpid();
 
@@ -401,6 +405,17 @@ void SrsStatistic::on_disconnect(int id)
     
     stream->nb_clients--;
     vhost->nb_clients--;
+
+    ///////////////////////////////////////////////////////////////
+    // 2017.06.10 - by jackey => add transmit decrease code...
+    ///////////////////////////////////////////////////////////////
+    string   strLive = "live";
+		string & strStream = stream->stream;
+		// must be 1 and prefex is LIVE...
+		if( (stream->nb_clients == 1) && (strncasecmp(strStream.c_str(), strLive.c_str(), strLive.size()) == 0) ) {
+				int nLiveID = ::atoi(strStream.c_str() + strLive.size());
+				_srs_server->doTransmitLiveLogin(nLiveID, 0);
+		}
 }
 
 void SrsStatistic::kbps_add_delta(SrsConnection* conn)
