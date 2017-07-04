@@ -472,6 +472,21 @@ int SrsRtmpConn::stream_service_cycle()
         return ret;
     }
     req->strip();
+    
+    // 2017.07.04 - by jackey => process ?...
+    if( req->stream.size() > 0 ) {
+      std::string strName, strQuery;
+      char * start = (char*)req->stream.c_str();
+      char * pos = strstr(start, "?");
+      int nSize = req->stream.size();
+      if( pos != NULL ) {
+        strQuery.assign(pos+1, nSize-(pos-start+1));
+        strName.assign(start, pos-start);
+        req->stream = strName;
+        req->query = strQuery;
+      }
+    }
+    
     srs_trace("client identified, type=%s, stream_name=%s, duration=%.2f", 
         srs_client_type_string(type).c_str(), req->stream.c_str(), req->duration);
     
