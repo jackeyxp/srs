@@ -1493,7 +1493,7 @@ int SrsServer::doTransmitLiveLogin(int nLiveID, int nUserCount)
     result = getnameinfo(ifa->ifa_addr, sizeof(struct sockaddr_in), host_ip, NI_MAXHOST, NULL, 0, NI_NUMERICHOST);
     if( result != 0 )
       continue;
-    if( strcasecmp(host_ip, "127.0.0.1") == 0 )
+    if( strcasecmp(host_ip, "127.0.0.1") == 0 || strcasecmp(host_ip, "10.29.179.147") == 0 )
       continue;
     is_ok = 1;
     break;
