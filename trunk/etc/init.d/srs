@@ -12,11 +12,11 @@
 
 # the config of ROOT, user must modify it when start srs from other directory,
 # it's ok to use the script by command ./etc/init.d/ossrs
-ROOT="./"
-APP="./objs/srs"
-CONFIG="./conf/srs.conf"
-DEFAULT_PID_FILE='./objs/srs.pid'
-DEFAULT_LOG_FILE='./objs/srs.log'
+ROOT="/weike/srs"
+APP="/weike/srs/bin/srs"
+CONFIG="/weike/srs/conf/srs.conf"
+DEFAULT_PID_FILE='/weike/srs/logs/srs.pid'
+DEFAULT_LOG_FILE='/weike/srs/logs/srs.log'
 
 ########################################################################
 # utility functions
