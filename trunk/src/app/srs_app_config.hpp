@@ -838,6 +838,7 @@ public:
 // log section
 public:
 		virtual int									get_rtmp_listen();
+		virtual int									get_web_https();
 		virtual int									get_web_port();
 		virtual std::string					get_web_addr();
     /**

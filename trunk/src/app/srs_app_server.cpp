@@ -1479,6 +1479,7 @@ int SrsServer::doTransmitLiveLogin(int nLiveID, int nUserCount)
   int family, result, is_ok = 0;
 	int nRtmpPort = _srs_config->get_rtmp_listen();
 	int nWebPort = _srs_config->get_web_port();
+	int nWebHttps = _srs_config->get_web_https();
 	std::string strWebAddr = _srs_config->get_web_addr();
   
   if( getifaddrs(&ifaddr) == -1) {
@@ -1516,10 +1517,16 @@ int SrsServer::doTransmitLiveLogin(int nLiveID, int nUserCount)
     strCommand = "vary";
   }
   sprintf(strPost, "rtmp_addr=%s:%d&rtmp_live=%d&rtmp_user=%d", host_ip, nRtmpPort, nLiveID, nUserCount);
-  sprintf(strUrl, "http://%s:%d/wxapi.php/RTMP/%s", strWebAddr.c_str(), nWebPort, strCommand.c_str());
+  sprintf(strUrl, "%s://%s:%d/wxapi.php/RTMP/%s", ((nWebHttps > 0) ? "https" : "http"), strWebAddr.c_str(), nWebPort, strCommand.c_str());
   if( curl == NULL )
     return -1;
-  // 设定curl参数，采用post模式...
+  // 如果是https模式还需要设置SSL参数，忽略证书检查...
+  if( nWebHttps > 0 ) {
+		res = curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0);
+		res = curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0);
+  }
+  // 设定curl参数，采用post模式，设置5秒超时...
+  res = curl_easy_setopt(curl, CURLOPT_TIMEOUT, 5);
   res = curl_easy_setopt(curl, CURLOPT_POSTFIELDS, strPost);
   res = curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, strlen(strPost));
   res = curl_easy_setopt(curl, CURLOPT_HEADER, 0);
@@ -1528,6 +1535,10 @@ int SrsServer::doTransmitLiveLogin(int nLiveID, int nUserCount)
   res = curl_easy_setopt(curl, CURLOPT_URL, strUrl);
   res = curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, procCurlPost);
   res = curl_easy_perform(curl);
+  // 打印访问结果信息...
+  if( res != CURLE_OK ) {
+    srs_error("File: %s:%d, Code: %d\n", __FILE__, __LINE__, res);
+  }
   // 释放资源...
   if( curl != NULL ) {
     curl_easy_cleanup(curl);

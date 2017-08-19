@@ -1573,7 +1573,7 @@ int SrsConfig::check_config()
             && n != "http_api" && n != "stats" && n != "vhost" && n != "pithy_print_ms"
             && n != "http_stream" && n != "http_server" && n != "stream_caster"
             && n != "utc_time" && n != "work_dir" && n != "asprocess"
-						&& n != "web_addr" && n != "web_port"
+						&& n != "web_addr" && n != "web_port" && n != "web_https"
         ) {
             ret = ERROR_SYSTEM_CONFIG_INVALID;
             srs_error("unsupported directive %s, ret=%d", n.c_str(), ret);
@@ -3553,6 +3553,18 @@ int SrsConfig::get_rtmp_listen()
     SrsConfDirective* conf = root->get("listen");
     if (!conf || conf->arg0().empty()) {
         return -1;
+    }
+    return ::atoi(conf->arg0().c_str());
+}
+
+// 2017.08.18 - add by jackey...
+int SrsConfig::get_web_https()
+{
+    srs_assert(root);
+    
+    SrsConfDirective* conf = root->get("web_https");
+    if (!conf || conf->arg0().empty()) {
+        return 0;
     }
     return ::atoi(conf->arg0().c_str());
 }
