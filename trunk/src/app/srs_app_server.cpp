@@ -99,7 +99,11 @@ using namespace std;
 #define SRS_SYS_NETWORK_DEVICE_RESOLUTION_TIMES 9
 
 // 2017.06.10 - by jackey => report time out...
-#define SRS_LIVE_TIME_OUT   5 * 60
+#define SRS_LIVE_TIMEOUT_OK   2 * 60
+#define SRS_LIVE_TIMEOUT_ERR  1 * 10
+
+int g_nWebResult = false;
+int g_nWebTimeout = SRS_LIVE_TIMEOUT_ERR;
 
 std::string srs_listener_type2string(SrsListenerType type) 
 {
@@ -994,7 +998,7 @@ int SrsServer::do_cycle()
 
 						// 2017.06.10 - by jackey => process timeout...
 						tEndSec = time(NULL);
-						if( (tEndSec - tStartSec) >= SRS_LIVE_TIME_OUT ) {
+						if( (tEndSec - tStartSec) >= g_nWebTimeout ) {
 								doTransmitLiveLogin(0, 0);
 								tStartSec = tEndSec;
 						}
@@ -1468,7 +1472,11 @@ void SrsServer::on_unpublish(SrsSource* s, SrsRequest* r)
 // 2017.06.10 - the post curl callback...
 size_t procCurlPost(char *ptr, size_t size, size_t nmemb, void *stream)
 {
-	return size * nmemb;
+  size_t nSize = size * nmemb;
+  if( ptr != NULL && nSize > 0 ) {
+    g_nWebResult = atoi(ptr);
+  }
+	return nSize;
 }
 
 // 2017.06.10 - by jackey...
@@ -1537,11 +1545,16 @@ int SrsServer::doTransmitLiveLogin(int nLiveID, int nUserCount)
   res = curl_easy_perform(curl);
   // 打印访问结果信息...
   if( res != CURLE_OK ) {
-    srs_error("File: %s:%d, Code: %d\n", __FILE__, __LINE__, res);
+    srs_error("File: %s:%d, Code: %d", __FILE__, __LINE__, res);
   }
   // 释放资源...
   if( curl != NULL ) {
     curl_easy_cleanup(curl);
+  }
+  // 登录模式 => 根据反馈结果设置超时时间...
+  if( nLiveID == 0 ) {
+    g_nWebTimeout = ((g_nWebResult > 0) ? SRS_LIVE_TIMEOUT_OK : SRS_LIVE_TIMEOUT_ERR);
+    srs_trace("== Login Timeout = %d, Result = %d", g_nWebTimeout, g_nWebResult);
   }
   return 0;
 }
