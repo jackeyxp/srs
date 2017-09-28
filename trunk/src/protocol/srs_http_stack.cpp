@@ -346,6 +346,9 @@ int SrsHttpFileServer::serve_file(ISrsHttpResponseWriter* w, ISrsHttpMessage* r,
     
     // unset the content length to encode in chunked encoding.
     w->header()->set_content_length(length);
+
+    // 2017.09.28 - by jackey => for videojs-contrib-hls...
+    w->header()->set("Access-Control-Allow-Origin", "*");
     
     static std::map<std::string, std::string> _mime;
     if (_mime.empty()) {

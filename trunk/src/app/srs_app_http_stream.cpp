@@ -479,6 +479,9 @@ int SrsLiveStream::serve_http(ISrsHttpResponseWriter* w, ISrsHttpMessage* r)
     int ret = ERROR_SUCCESS;
     
     ISrsStreamEncoder* enc = NULL;
+
+    // 2017.09.28 - by jackey => for videojs-contrib-hls...
+    w->header()->set("Access-Control-Allow-Origin", "*");
     
     srs_assert(entry);
     if (srs_string_ends_with(entry->pattern, ".flv")) {
