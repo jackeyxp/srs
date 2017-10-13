@@ -1489,6 +1489,7 @@ int SrsServer::doTransmitLiveLogin(int nLiveID, int nUserCount)
 	int nWebPort = _srs_config->get_web_port();
 	int nWebHttps = _srs_config->get_web_https();
 	std::string strWebAddr = _srs_config->get_web_addr();
+    std::string strHlsPort = _srs_config->get_http_stream_listen();
   
   if( getifaddrs(&ifaddr) == -1) {
     return -1;
@@ -1524,7 +1525,7 @@ int SrsServer::doTransmitLiveLogin(int nLiveID, int nUserCount)
   } else {
     strCommand = "vary";
   }
-  sprintf(strPost, "rtmp_addr=%s:%d&rtmp_live=%d&rtmp_user=%d", host_ip, nRtmpPort, nLiveID, nUserCount);
+  sprintf(strPost, "rtmp_addr=%s:%d&hls_addr=%s:%s&rtmp_live=%d&rtmp_user=%d", host_ip, nRtmpPort, host_ip, strHlsPort.c_str(), nLiveID, nUserCount);
   sprintf(strUrl, "%s://%s:%d/wxapi.php/RTMP/%s", ((nWebHttps > 0) ? "https" : "http"), strWebAddr.c_str(), nWebPort, strCommand.c_str());
   if( curl == NULL )
     return -1;
