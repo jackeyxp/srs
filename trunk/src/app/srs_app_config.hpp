@@ -841,6 +841,8 @@ public:
 		virtual int									get_web_https();
 		virtual int									get_web_port();
 		virtual std::string					get_web_addr();
+    virtual std::string         get_web_report();
+    virtual int                 get_web_local();
     /**
     * whether log to file.
     */

@@ -1574,6 +1574,7 @@ int SrsConfig::check_config()
             && n != "http_stream" && n != "http_server" && n != "stream_caster"
             && n != "utc_time" && n != "work_dir" && n != "asprocess"
 						&& n != "web_addr" && n != "web_port" && n != "web_https"
+            && n != "web_report" && n != "web_local"
         ) {
             ret = ERROR_SYSTEM_CONFIG_INVALID;
             srs_error("unsupported directive %s, ret=%d", n.c_str(), ret);
@@ -3591,6 +3592,30 @@ string SrsConfig::get_web_addr()
         return "";
     }
     return conf->arg0();
+}
+
+// 2017.10.25 - add by jackey...
+string SrsConfig::get_web_report()
+{
+    srs_assert(root);
+    
+    SrsConfDirective* conf = root->get("web_report");
+    if (!conf || conf->arg0().empty()) {
+        return "";
+    }
+    return conf->arg0();
+}
+
+// 2017.10.25 - default 1...
+int SrsConfig::get_web_local()
+{
+    srs_assert(root);
+    
+    SrsConfDirective* conf = root->get("web_local");
+    if (!conf || conf->arg0().empty()) {
+        return 1;
+    }
+    return ::atoi(conf->arg0().c_str());
 }
 
 bool SrsConfig::get_log_tank_file()

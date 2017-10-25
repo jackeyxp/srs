@@ -1488,28 +1488,39 @@ int SrsServer::doTransmitLiveLogin(int nLiveID, int nUserCount)
 	int nRtmpPort = _srs_config->get_rtmp_listen();
 	int nWebPort = _srs_config->get_web_port();
 	int nWebHttps = _srs_config->get_web_https();
+  int nWebLocal = _srs_config->get_web_local();
+  std::string strWebReport = _srs_config->get_web_report();
 	std::string strWebAddr = _srs_config->get_web_addr();
-    std::string strHlsPort = _srs_config->get_http_stream_listen();
-  
-  if( getifaddrs(&ifaddr) == -1) {
-    return -1;
+  std::string strHlsPort = _srs_config->get_http_stream_listen();
+  // 默认先用设定的汇报地址填充主机地址...
+  strcpy(host_ip, strWebReport.c_str());
+  // 如果设定采用本机地址，或者，不采用本机地址但却没有设定汇报地址，都要从本地获取地址...
+  if( (nWebLocal > 0) || (nWebLocal <= 0 && strWebReport.size() <=0) ) {
+    if( getifaddrs(&ifaddr) == -1) {
+      return -1;
+    }
+    for( ifa = ifaddr; ifa != NULL; ifa = ifa->ifa_next ) { 
+      if( ifa->ifa_addr == NULL )
+        continue;
+      family = ifa->ifa_addr->sa_family;
+      if( family != AF_INET )
+        continue;
+      result = getnameinfo(ifa->ifa_addr, sizeof(struct sockaddr_in), host_ip, NI_MAXHOST, NULL, 0, NI_NUMERICHOST);
+      if( result != 0 )
+        continue;
+      if( strcasecmp(host_ip, "127.0.0.1") == 0 || strcasecmp(host_ip, "10.29.179.147") == 0 )
+        continue;
+      is_ok = 1;
+      break;
+    }
+    freeifaddrs(ifaddr);
+    if( !is_ok ) {
+      return -1;
+    }
   }
-  for( ifa = ifaddr; ifa != NULL; ifa = ifa->ifa_next ) { 
-    if( ifa->ifa_addr == NULL )
-      continue;
-    family = ifa->ifa_addr->sa_family;
-    if( family != AF_INET )
-      continue;
-    result = getnameinfo(ifa->ifa_addr, sizeof(struct sockaddr_in), host_ip, NI_MAXHOST, NULL, 0, NI_NUMERICHOST);
-    if( result != 0 )
-      continue;
-    if( strcasecmp(host_ip, "127.0.0.1") == 0 || strcasecmp(host_ip, "10.29.179.147") == 0 )
-      continue;
-    is_ok = 1;
-    break;
-  }
-  freeifaddrs(ifaddr);
-  if( !is_ok ) {
+  // 如果汇报地址host_ip为空，打印错误，返回...
+  if( strlen(host_ip) <= 0 ) {
+    srs_trace("== Login Error: host_ip is empty ==");
     return -1;
   }
   // call curl...
